@@ -1,0 +1,52 @@
+<!--
+  ~ Copyright 2005-2017 Restlet
+  ~
+  ~ The contents of this file are subject to the terms of one of the following
+  ~ open source licenses: Apache 2.0 or or EPL 1.0 (the "Licenses"). You can
+  ~ select the license that you prefer but you may not use this file except in
+  ~ compliance with one of these Licenses.
+  ~
+  ~ You can obtain a copy of the Apache 2.0 license at
+  ~ http://www.opensource.org/licenses/apache-2.0
+  ~
+  ~ You can obtain a copy of the EPL 1.0 license at
+  ~ http://www.opensource.org/licenses/eclipse-1.0
+  ~
+  ~ See the Licenses for the specific language governing permissions and
+  ~ limitations under the Licenses.
+  ~
+  ~ Alternatively, you can obtain a royalty free commercial license with less
+  ~ limitations, transferable or non-transferable, directly at
+  ~ http://restlet.com/products/restlet-framework
+  ~
+  ~ Restlet is a registered trademark of Restlet S.A.S.
+  -->
+
+<html>
+  <head>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.9.3/lodash.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.3/moment.js"></script>
+    <script type="text/javascript" src="restlet.min.js"></script>
+    <script type="text/javascript">
+    $(document).ready(function() {
+      $('#test').click(function() {
+        //var headers = new Array();
+        //headers['Content-type'] = 'application/json';
+        //headers['Authorization'] = 'NLAuth nlauth_email=kruparelia@netsuite.com, nlauth_signature=!, nlauth_account=TSTDRV1568114, nlauth_role=3';
+        restlet.createClientResource('http://rest.netsuite.com/app/site/hosting/restlet.nl?script=144&deploy=1&nlauth_account=TSTDRV1568114,nlauth_email=kruparelia@netsuite.com,nlauth_signature=Uncleisbest123!,nlauth_role=3').get({
+          accept: 'application/json',
+          parameters: [ 'entity' ],
+          convertInputEntity: true
+        }, function(entity) {
+          console.log('>> entity = ' + JSON.stringify(entity));
+        });
+      });
+    });
+    </script>
+  </head>
+
+  <body>
+    <span id="test">Run Restlet client asdf</span>
+  </body>
+</html>

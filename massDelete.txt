@@ -1,0 +1,142 @@
+//****************************************************************************//
+// Type/API : Scheduled Script (1.0)
+// Filename : XPO_SS_MassDeleteRecords.js
+// Scriptid : customscript_mass_delete_records
+// Updated  : 12/07/2017
+// Contributors:
+//    Darryl Lutchmipersad
+//****************************************************************************//
+
+var THRESHOLD = 1000;
+var CONTEXT = nlapiGetContext();
+
+
+function scheduled_mass_delete_record(type) {
+    var stLogTitle = 'scheduled_mass_delete_record';
+
+    try {
+        var arrScriptParams = {
+            custscript_saved_search: CONTEXT.getSetting('SCRIPT', 'custscript_rec_del_search'),
+        };
+
+        if (!arrScriptParams.custscript_saved_search) {
+            throw nlapiCreateError('INC_PARAMS', 'Incomplete Parameters.', true);
+        }
+        nlapiLogExecution('DEBUG', stLogTitle, 'Saved Search Name: ' + arrScriptParams.custscript_saved_search);
+        var arrResults = getAllResults(null, arrScriptParams.custscript_saved_search);
+
+        if (!(arrResults && arrResults.length)) {
+          nlapiLogExecution('DEBUG', stLogTitle, 'No results to process.');
+          return;
+        }
+
+        if (arrResults && arrResults.length) {
+        nlapiLogExecution('DEBUG', stLogTitle, arrResults.length + ' result(s) to delete.');
+
+            for (var idx in arrResults) {
+                checkGovernance(THRESHOLD);
+
+                try {
+                    var stRecordId = arrResults[idx].getId();
+                    var stRecordType = arrResults[idx].getRecordType();
+
+                    nlapiLogExecution('DEBUG', stLogTitle, 'Deleting Record: ' + stRecordId);
+
+                    nlapiDeleteRecord(stRecordType, stRecordId);
+
+                    nlapiLogExecution('DEBUG', stLogTitle, 'Deleted Record = ' + stRecordId);
+                } catch (error) {
+                    checkGovernance(THRESHOLD);
+
+                    if (error.getDetails != undefined) {
+                        nlapiLogExecution('ERROR', 'Process Error', error.getCode() + ': ' + error.getDetails());
+                    } else {
+                        nlapiLogExecution('ERROR', 'Unexpected Error', error.toString());
+                    }
+                }
+            }
+        }
+    } catch (error) {
+
+        if (error.getDetails != undefined) {
+            nlapiLogExecution('ERROR', 'Process Error', error.getCode() + ': ' + error.getDetails());
+            throw error;
+        } else {
+            nlapiLogExecution('ERROR', 'Unexpected Error', error.toString());
+            throw nlapiCreateError('99999', error.toString(), true);
+        }
+    }
+
+    while(arrResults.length){
+    var status = nlapiScheduleScript(CONTEXT.getScriptId(), CONTEXT.getDeploymentId())
+    if ( status == 'QUEUED' )
+        break;
+        }
+}
+
+//Search Utility to retrieve all the search results
+    function getAllResults(stRecordType, stSavedSearch) {
+    var stLogTitle = 'getAllResults';
+    nlapiLogExecution('DEBUG', stLogTitle, 'Entering getAllResults')
+
+    var arrResult = [];
+    var count = 1000;
+    var init = true;
+    var min = 0;
+    var max = 1000;
+    var search = null;
+
+    if (stSavedSearch) {
+    }
+
+    search = nlapiLoadSearch(stRecordType, stSavedSearch);
+    var rs = search.runSearch();
+    var resultSet = rs.getResults(min, max);
+    arrResult = arrResult.concat(resultSet);
+
+    return arrResult;
+}
+
+//Check usage versus threshold
+function checkGovernance(governanceThreshold) {
+
+  timeoutlimit = 2700000;
+
+  var usageReport = {};
+  usageReport.remainingUsage = CONTEXT.getRemainingUsage();
+  usageReport.timestamp = (new Date()).getTime();
+
+  usageReport.usage_delta = this.lastRemainingUsage ? usageReport.remainingUsage - this.lastRemainingUsage : usageReport.remainingUsage;
+  usageReport.tstamp_delta = this.lastTimestamp ? usageReport.timestamp - this.lastTimestamp : 0;
+
+  //usageReport.threshold = governanceThreshold;
+
+  nlapiLogExecution('AUDIT', '###Usage Report###', JSON.stringify(usageReport));
+
+  this.lastRemainingUsage = usageReport.remainingUsage;
+
+  if ((CONTEXT.getRemainingUsage() < governanceThreshold) || (usageReport.tstamp_delta > timeoutlimit)){
+        nlapiLogExecution('DEBUG', stLogTitle, 'Remaining Usage < Governance Threshold or Timeout Limit has been met');
+
+        var state = nlapiYieldScript();
+        if (state.status == 'FAILURE') {
+            nlapiLogExecution("ERROR", "Failed to yield script, exiting: Reason = " + state.reason + " / Size = " + state.size);
+            throw "Failed to yield script";
+        } else if (state.status == 'RESUME') {
+            nlapiLogExecution("ERROR", "Resuming script because of " + state.reason + ".  Size = " + state.size);
+        }
+    }
+}
+
+function inArray(val, arr) {
+    var bIsValueFound = false;
+
+    for (var i = 0; i < arr.length; i++) {
+        if (val == arr[i]) {
+            bIsValueFound = true;
+            break;
+        }
+    }
+
+    return bIsValueFound;
+}
