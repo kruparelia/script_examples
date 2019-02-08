@@ -1,0 +1,44 @@
+define(['N/runtime', 'N/log'], function(runtime, log) {
+    const CACHE_NAME = 'TEST_CACHE';
+    const CACHE_JSON = 'CACHE_JSON';
+    var JSON_cache = '';
+
+    function getCacheTest(type) {
+        var ex = runtime.executionContext;
+        log.debug('type', ex);
+        log.debug('type', type);
+        if (type == 'client') {
+            log.debug('client');
+            return testCacheLoader();
+        } else {
+            require(['N/cache'], function(cache) {
+
+                log.debug('cache loader function lib');
+                var testCache = cache.getCache({
+                    name: CACHE_NAME
+                });
+                var testCacheJSON = testCache.get({
+                    key: CACHE_JSON,
+                    loader: testCacheLoader
+                });
+
+                JSON_cache = testCacheJSON;
+            });
+            return JSON_cache;
+        }
+
+    }
+
+    function testCacheLoader() {
+        var obj = {
+            test1: 1,
+            test2: 2,
+            test3: 3
+        }
+        return obj;
+    }
+
+    return {
+        getCacheTest: getCacheTest
+    };
+})
